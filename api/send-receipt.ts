@@ -29,7 +29,8 @@ async function requireFinanceStaff(req: VercelRequest) {
   let uid: string;
   try {
     uid = (await adminAuth().verifyIdToken(token)).uid;
-  } catch {
+  } catch (error) {
+    console.error("send-receipt: Firebase ID token verification failed", error);
     throw new HttpError(401, "Your session has expired. Sign in again.");
   }
   // Same source of truth as the Firestore rules: roles/{uid}.
