@@ -58,7 +58,7 @@ function errorText(error: unknown, fallback: string) {
   if (code === "auth/weak-password") return "That password is too weak.";
   if (code === "auth/invalid-email") return "That email address is not valid.";
   if (code === "permission-denied")
-    return "The database rejected that change. Make sure the latest firestore.rules are deployed.";
+    return "The database rejected that change. Makee sure the latest firestore.rules are deployed.";
   return fallback;
 }
 
