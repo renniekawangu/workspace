@@ -21,7 +21,9 @@
     "create-user": "tsx scripts/create-user.ts",
     "disable-user": "tsx scripts/disable-user.ts",
     "enable-user": "tsx scripts/enable-user.ts",
-    "seed": "tsx scripts/seed-data.ts"
+    "seed": "tsx scripts/seed-data.ts",
+    "encode-firebase-service-account": "tsx scripts/encode-firebase-service-account.ts",
+    "test-smtp": "tsx scripts/test-smtp.ts"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

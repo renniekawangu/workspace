@@ -105,16 +105,12 @@ export function LeavePage() {
             query(
               collection(db, "leave"),
               where("employeeId", "==", user.uid),
-              orderBy("createdAt", "desc"),
-              limit(100),
             ),
           ),
           getDocs(
             query(
               collection(db, "leave"),
               where("approverId", "==", user.uid),
-              orderBy("createdAt", "desc"),
-              limit(100),
             ),
           ),
         ]);

@@ -79,8 +79,6 @@ export function AttendancePage() {
           : query(
               collection(db, "attendance"),
               where("employeeId", "==", user.uid),
-              orderBy("dateKey", "desc"),
-              limit(60),
             );
       const snap = await getDocs(q);
       const rows = snap.docs.map(

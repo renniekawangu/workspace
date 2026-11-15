@@ -30,6 +30,9 @@ export const canCreateDigitalContent = (role: Role | null) =>
   isAdmin(role) || role === "digitalops" || role === "designer";
 export const canManageProjects = (role: Role | null) =>
   isAdmin(role) || role === "bizops";
+export const canAccessDirectory = (role: Role | null) =>
+  isAdmin(role) || role === "employee";
+export const canAccessFinance = (role: Role | null) => isAdmin(role);
 /** Only admins can list every leave/attendance record; approvers see theirs. */
 export const canReviewLeave = (role: Role | null) => isAdmin(role);
 export const canViewStaffProfile = (

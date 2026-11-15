@@ -61,6 +61,7 @@ type Project = {
   managerId: string;
   memberIds: string[];
   milestones: Milestone[];
+  updatedAt?: { seconds: number };
 };
 
 type ClientOption = { id: string; company: string };
@@ -145,19 +146,19 @@ export function ProjectsPage() {
     try {
       const constraints = canManage
         ? [orderBy("updatedAt", "desc"), limit(150)]
-        : [
-            where("memberIds", "array-contains", user.uid),
-            orderBy("updatedAt", "desc"),
-            limit(150),
-          ];
+        : [where("memberIds", "array-contains", user.uid)];
       const snap = await getDocs(
         query(collection(db, "projects"), ...constraints),
       );
-      setItems(
-        snap.docs.map(
-          (d) => ({ id: d.id, ...(d.data() as Omit<Project, "id">) }),
-        ),
+      const rows = snap.docs.map(
+        (d) => ({ id: d.id, ...(d.data() as Omit<Project, "id">) }),
       );
+      rows.sort((a, b) => {
+        const aUpdated = a.updatedAt ? new Date(a.updatedAt.seconds * 1000).getTime() : 0;
+        const bUpdated = b.updatedAt ? new Date(b.updatedAt.seconds * 1000).getTime() : 0;
+        return bUpdated - aUpdated;
+      });
+      setItems(rows);
     } catch {
       setError(
         "Projects could not be loaded. Check your connection and project access permissions.",

@@ -11,6 +11,7 @@ import { useAuth } from "../../app/AuthProvider";
 import { loadTasks } from "../../lib/data";
 import { db } from "../../lib/firebase";
 import {
+  canAccessDirectory,
   isReportsRole,
 } from "../../lib/roles";
 
@@ -72,11 +73,12 @@ export function DashboardPage() {
   }), [tasks]);
   const completion = counts.total ? Math.round((counts.done / counts.total) * 100) : 0;
   const firstName = user?.displayName?.split(" ")[0] || user?.email?.split("@")[0] || "there";
+  const canDirectory = canAccessDirectory(role);
 
   const quickLinks = [
     { to: "/tasks", icon: "↗", title: "Open task board", text: "Review assignments and update progress" },
     { to: "/notifications", icon: "♢", title: "Attention centre", text: "Review approvals, overdue items and reminders" },
-    { to: "/directory", icon: "◎", title: "Find a teammate", text: "Browse staff profiles and departments" },
+    ...(canDirectory ? [{ to: "/directory", icon: "◎", title: "Find a teammate", text: "Browse staff profiles and departments" }] : []),
     { to: "/onboarding", icon: "✓", title: "Onboarding", text: "Review onboarding progress and checklists" },
     { to: "/announcements", icon: "✳", title: "Announcements", text: "Read the latest team updates" },
     ...(isReportsRole(role) ? [{ to: "/reports", icon: "▥", title: "Reports & analytics", text: "Review performance across accessible modules" }] : []),
@@ -91,7 +93,7 @@ export function DashboardPage() {
           <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">Your workspace at a glance. Keep your priorities moving, stay connected with the team, and make progress visible.</p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/tasks" className="primary-action">View my tasks <span aria-hidden="true">→</span></Link>
-            <Link to="/directory" className="secondary-action">Explore the team</Link>
+            {canDirectory && <Link to="/directory" className="secondary-action">Explore the team</Link>}
           </div>
         </div>
         <div className="hero-orbit" aria-hidden="true"><div className="hero-orbit-inner">B</div></div>

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   ROLE_DEPT,
+  canAccessDirectory,
+  canAccessFinance,
   canCreateDigitalContent,
   canCreateTasks,
   canManageAnnouncements,
@@ -56,6 +58,14 @@ describe("role helpers", () => {
     expect(canCreateDigitalContent("employee")).toBe(false);
     expect(canManageProjects("bizops")).toBe(true);
     expect(canManageProjects("employee")).toBe(false);
+    expect(canAccessDirectory("admin")).toBe(true);
+    expect(canAccessDirectory("employee")).toBe(true);
+    expect(canAccessDirectory("bizops")).toBe(false);
+    expect(canAccessDirectory("digitalops")).toBe(false);
+    expect(canAccessDirectory("designer")).toBe(false);
+    expect(canAccessFinance("admin")).toBe(true);
+    expect(canAccessFinance("bizops")).toBe(false);
+    expect(canAccessFinance("digitalops")).toBe(false);
     expect(canViewStaffProfile("admin", "u1", "u2")).toBe(true);
     expect(canViewStaffProfile("employee", "u1", "u2")).toBe(false);
     expect(canViewStaffProfile("employee", "u2", "u2")).toBe(true);
