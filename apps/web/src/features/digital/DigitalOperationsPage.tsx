@@ -57,6 +57,7 @@ type RequestItem = {
   pageUrl: string;
   priority: string;
   status: string;
+  completionNote?: string;
   createdBy: string;
 };
 type Campaign = {
@@ -163,6 +164,61 @@ function requestTone(status: string): Tone {
   return "amber";
 }
 
+const PRIORITY_RANK: Record<string, number> = {
+  Urgent: 0,
+  High: 1,
+  Normal: 2,
+  Low: 3,
+};
+const POST_CHIP: Record<string, string> = {
+  draft: "bg-slate-700/40 text-slate-300",
+  pending_approval: "bg-amber-400/15 text-amber-200",
+  approved: "bg-emerald-400/15 text-emerald-200",
+  scheduled: "bg-sky-400/15 text-sky-200",
+  published: "bg-emerald-400/25 text-emerald-100",
+  rejected: "bg-red-400/15 text-red-200",
+};
+const POST_FILTERS = [
+  ["all", "All"],
+  ["pending_approval", "Awaiting approval"],
+  ["approved", "Approved"],
+  ["scheduled", "Scheduled"],
+  ["published", "Published"],
+  ["draft", "Drafts"],
+  ["rejected", "Rejected"],
+] as const;
+const REQUEST_FILTERS = [
+  ["open", "Open"],
+  ["completed", "Completed"],
+  ["rejected", "Rejected"],
+  ["all", "All"],
+] as const;
+
+function Metric({
+  title,
+  value,
+  detail,
+  accent,
+}: {
+  title: string;
+  value: string | number;
+  detail: string;
+  accent: string;
+}) {
+  return (
+    <article className="metric-card">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-slate-400">{title}</p>
+        <span className={`h-2 w-2 rounded-full ${accent}`} />
+      </div>
+      <p className="mt-5 text-3xl font-semibold tracking-tight text-white">
+        {value}
+      </p>
+      <p className="mt-2 text-xs text-slate-500">{detail}</p>
+    </article>
+  );
+}
+
 export function DigitalOperationsPage() {
   const { user, role } = useAuth();
   const toast = useToast();
@@ -171,7 +227,7 @@ export function DigitalOperationsPage() {
   const assetAccess = postAccess;
   const campaignAccess = canManageCampaigns(role);
 
-  const [tab, setTab] = useState<Tab>("Website requests");
+  const [tab, setTab] = useState<Tab>("Approvals");
   const [posts, setPosts] = useState<Post[]>([]);
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -181,6 +237,14 @@ export function DigitalOperationsPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [month, setMonth] = useState(todayKey().slice(0, 7));
+  const [postFilter, setPostFilter] = useState<string>("all");
+  const [reqFilter, setReqFilter] = useState<string>("open");
+  const [reqSearch, setReqSearch] = useState("");
+  const [closing, setClosing] = useState<{
+    item: RequestItem;
+    status: "completed" | "rejected";
+  } | null>(null);
+  const [closeNote, setCloseNote] = useState("");
   const [rejecting, setRejecting] = useState<Post | null>(null);
   const [rejectNote, setRejectNote] = useState("");
 
@@ -220,13 +284,7 @@ export function DigitalOperationsPage() {
     setError("");
     try {
       const postAllowed = canCreateDigitalContent(role);
-      const pq =
-        role === "designer"
-          ? query(
-              collection(db, "socialPosts"),
-              where("createdBy", "==", user.uid),
-            )
-          : collection(db, "socialPosts");
+      const pq = collection(db, "socialPosts");
       const rq = manager
         ? collection(db, "websiteRequests")
         : query(
@@ -411,11 +469,14 @@ export function DigitalOperationsPage() {
     }, "Website change request submitted.");
   }
 
-  async function requestState(r: RequestItem, status: string) {
+  async function requestState(r: RequestItem, status: string, note?: string) {
     if (!user || !manager) return;
     await save(async () => {
       await updateDoc(doc(db, "websiteRequests", r.id), {
         status,
+        ...(note !== undefined
+          ? { completionNote: note.trim().slice(0, 2000) }
+          : {}),
         updatedBy: user.uid,
         updatedAt: serverTimestamp(),
       });
@@ -425,7 +486,9 @@ export function DigitalOperationsPage() {
         "websiteRequest",
         r.id,
       );
-    }, `Request moved to ${status}.`);
+      setClosing(null);
+      setCloseNote("");
+    }, `Request moved to ${status.replaceAll("_", " ")}.`);
   }
 
   async function submitCampaign(e: FormEvent) {
@@ -567,6 +630,37 @@ export function DigitalOperationsPage() {
       .includes(search.toLowerCase()),
   );
   const pendingApproval = posts.filter((p) => p.status === "pending_approval");
+  const postCounts = posts.reduce<Record<string, number>>(
+    (acc, p) => ({ ...acc, [p.status]: (acc[p.status] || 0) + 1 }),
+    {},
+  );
+  const statusPosts = filteredPosts.filter(
+    (p) => postFilter === "all" || p.status === postFilter,
+  );
+  const unscheduled = posts.filter(
+    (p) => !p.scheduledAt && ["draft", "approved"].includes(p.status),
+  );
+  const openRequests = requests.filter(
+    (r) => !["completed", "rejected"].includes(r.status),
+  );
+  const visibleRequests = requests
+    .filter((r) =>
+      reqFilter === "all"
+        ? true
+        : reqFilter === "open"
+          ? !["completed", "rejected"].includes(r.status)
+          : r.status === reqFilter,
+    )
+    .filter((r) =>
+      `${r.title} ${r.description}`
+        .toLowerCase()
+        .includes(reqSearch.toLowerCase()),
+    )
+    .sort(
+      (a, b) =>
+        (PRIORITY_RANK[a.priority] ?? 9) - (PRIORITY_RANK[b.priority] ?? 9),
+    );
+  const activeCampaigns = campaigns.filter((c) => c.status === "active");
   const totals = campaigns.reduce(
     (v, c) => ({
       impressions: v.impressions + c.impressions,
@@ -591,6 +685,35 @@ export function DigitalOperationsPage() {
       />
 
       {error && <ErrorNote>{error}</ErrorNote>}
+
+      {!loading && (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Metric
+            title="Awaiting approval"
+            value={pendingApproval.length}
+            detail="Content waiting for an admin"
+            accent="bg-amber-400"
+          />
+          <Metric
+            title="Scheduled this month"
+            value={monthPosts.length}
+            detail={`Dated posts in ${month}`}
+            accent="bg-sky-400"
+          />
+          <Metric
+            title="Open website requests"
+            value={openRequests.length}
+            detail="Not yet completed or rejected"
+            accent="bg-emerald-400"
+          />
+          <Metric
+            title="Active campaigns"
+            value={activeCampaigns.length}
+            detail={`${campaigns.length} planned in total`}
+            accent="bg-violet-400"
+          />
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {tabs.map((item) => {
@@ -667,7 +790,7 @@ export function DigitalOperationsPage() {
                           <p
                             key={p.id}
                             title={p.title}
-                            className="mt-1 truncate rounded bg-sky-400/10 px-1 py-1 text-[9px] text-sky-200"
+                            className={`mt-1 truncate rounded px-1 py-1 text-[9px] ${POST_CHIP[p.status] || POST_CHIP.draft}`}
                           >
                             {p.title}
                           </p>
@@ -705,6 +828,28 @@ export function DigitalOperationsPage() {
                     scheduled or dated posts
                   </p>
                 </div>
+                <div className="panel p-5">
+                  <h2 className="font-semibold text-white">Needs a date</h2>
+                  {unscheduled.length === 0 ? (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Every draft and approved post has a date.
+                    </p>
+                  ) : (
+                    <ul className="mt-3 space-y-2">
+                      {unscheduled.slice(0, 6).map((p) => (
+                        <li
+                          key={p.id}
+                          className="flex items-center justify-between gap-2 text-sm text-slate-300"
+                        >
+                          <span className="truncate">{p.title}</span>
+                          <StatusPill tone={postTone(p.status)}>
+                            {p.status.replaceAll("_", " ")}
+                          </StatusPill>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -731,14 +876,36 @@ export function DigitalOperationsPage() {
                 )}
               </div>
 
-              {filteredPosts.length === 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {POST_FILTERS.map(([key, text]) => {
+                  const count =
+                    key === "all" ? posts.length : postCounts[key] || 0;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setPostFilter(key)}
+                      className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-3 text-xs font-medium transition ${
+                        postFilter === key
+                          ? "border-sky-400/40 bg-sky-400/10 text-sky-200"
+                          : "border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white"
+                      }`}
+                    >
+                      {text}
+                      <span className="text-slate-500">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {statusPosts.length === 0 ? (
                 <EmptyState
                   title="No posts found"
                   text="Create a draft to start the content workflow."
                 />
               ) : (
                 <div className="space-y-3">
-                  {filteredPosts.map((p) => (
+                  {statusPosts.map((p) => (
                     <article key={p.id} className="panel p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
@@ -861,7 +1028,31 @@ export function DigitalOperationsPage() {
 
           {tab === "Website requests" && (
             <div className="space-y-4">
-              <div className="flex justify-end">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div className="flex flex-wrap items-end gap-3">
+                  <TextField
+                    label="Search requests"
+                    placeholder="Title or description…"
+                    value={reqSearch}
+                    onChange={(e) => setReqSearch(e.target.value)}
+                  />
+                  <div className="flex flex-wrap gap-2 pb-1">
+                    {REQUEST_FILTERS.map(([key, text]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setReqFilter(key)}
+                        className={`inline-flex min-h-10 items-center rounded-full border px-3 text-xs font-medium transition ${
+                          reqFilter === key
+                            ? "border-sky-400/40 bg-sky-400/10 text-sky-200"
+                            : "border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white"
+                        }`}
+                      >
+                        {text}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <Button
                   onClick={() => {
                     setRequest(blankRequest);
@@ -871,14 +1062,14 @@ export function DigitalOperationsPage() {
                   New website request
                 </Button>
               </div>
-              {requests.length === 0 ? (
+              {visibleRequests.length === 0 ? (
                 <EmptyState
                   title="No website requests"
-                  text="Submit a change request for the public site or product pages."
+                  text="Nothing matches this view. Log a change request for the public site or product pages."
                 />
               ) : (
                 <div className="space-y-3">
-                  {requests.map((r) => (
+                  {visibleRequests.map((r) => (
                     <article key={r.id} className="panel p-4">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
@@ -896,6 +1087,11 @@ export function DigitalOperationsPage() {
                       <p className="mt-3 text-sm text-slate-300">
                         {r.description}
                       </p>
+                      {r.completionNote && (
+                        <p className="mt-2 rounded-lg border border-slate-700 bg-slate-900/60 p-2 text-xs text-slate-300">
+                          Note: {r.completionNote}
+                        </p>
+                      )}
                       {r.pageUrl && (
                         <a
                           href={r.pageUrl}
@@ -918,7 +1114,12 @@ export function DigitalOperationsPage() {
                               key={s}
                               variant="subtle"
                               disabled={busy || r.status === s}
-                              onClick={() => void requestState(r, s)}
+                              onClick={() =>
+                                s === "completed" || s === "rejected"
+                                  ? (setCloseNote(r.completionNote || ""),
+                                    setClosing({ item: r, status: s }))
+                                  : void requestState(r, s)
+                              }
                             >
                               {s.replaceAll("_", " ")}
                             </Button>
@@ -960,17 +1161,33 @@ export function DigitalOperationsPage() {
                             {c.objective} · {c.startDate} → {c.endDate}
                           </p>
                         </div>
-                        <StatusPill tone="blue">{c.status}</StatusPill>
+                        <StatusPill
+                          tone={
+                            c.status === "active"
+                              ? "green"
+                              : c.status === "completed"
+                                ? "slate"
+                                : c.status === "paused"
+                                  ? "amber"
+                                  : "blue"
+                          }
+                        >
+                          {c.status}
+                        </StatusPill>
                       </div>
                       <p className="mt-3 text-sm text-slate-400">
                         {c.channels?.join(", ")} · Budget {money(c.budgetZmw)}
                       </p>
                       <p className="mt-2 text-xs text-slate-500">
                         {c.impressions} impr · {c.clicks} clicks · {c.leads}{" "}
-                        leads · {c.conversions} conversions
+                        leads · {c.conversions} conversions ·{" "}
+                        {c.impressions
+                          ? ((c.clicks / c.impressions) * 100).toFixed(2)
+                          : "0.00"}
+                        % CTR
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        {["planned", "live", "paused", "completed"].map(
+                        {["planned", "active", "paused", "completed"].map(
                           (s) => (
                             <Button
                               key={s}
@@ -1475,6 +1692,53 @@ export function DigitalOperationsPage() {
               onChange={(e) => setAsset({ ...asset, notes: e.target.value })}
             />
           </form>
+        </Modal>
+      )}
+      {closing && (
+        <Modal
+          title={
+            closing.status === "completed"
+              ? "Complete website request"
+              : "Reject website request"
+          }
+          onClose={() => !busy && setClosing(null)}
+          footer={
+            <>
+              <Button
+                variant="ghost"
+                disabled={busy}
+                onClick={() => setClosing(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={closing.status === "rejected" ? "danger" : "primary"}
+                disabled={busy || !closeNote.trim()}
+                onClick={() =>
+                  void requestState(closing.item, closing.status, closeNote)
+                }
+              >
+                {busy
+                  ? "Saving…"
+                  : closing.status === "completed"
+                    ? "Mark completed"
+                    : "Reject request"}
+              </Button>
+            </>
+          }
+        >
+          <p className="mb-3 text-sm text-slate-400">
+            {closing.status === "completed"
+              ? `Record what changed for “${closing.item.title}”, including a link to the live page if there is one. Never include passwords or keys.`
+              : `Tell the requester why “${closing.item.title}” was rejected.`}
+          </p>
+          <TextAreaField
+            label={closing.status === "completed" ? "Completion note" : "Reason"}
+            rows={4}
+            maxLength={2000}
+            value={closeNote}
+            onChange={(e) => setCloseNote(e.target.value)}
+          />
         </Modal>
       )}
       {rejecting && (

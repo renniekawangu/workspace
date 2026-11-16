@@ -102,13 +102,6 @@ export function NotificationsPage() {
           read("posts", "socialPosts", [where("createdBy", "==", user.uid)]),
         );
       }
-      if (role === "employee") {
-        jobs.push(
-          read("requests", "websiteRequests", [
-            where("createdBy", "==", user.uid),
-          ]),
-        );
-      }
 
       const result = await Promise.all(jobs);
       const byKey: Record<string, Row[]> = {};
@@ -190,7 +183,7 @@ export function NotificationsPage() {
             title: "Scheduled content is due",
             detail: String(r.title || "Untitled post"),
             severity: "attention",
-            href: "/digital",
+            href: role === "designer" ? "/design" : "/digital",
             group: "Content",
           });
         }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   ROLE_DEPT,
+  canAccessDesignStudio,
+  canAccessDigitalOps,
   canAccessDirectory,
   canAccessFinance,
   canCreateDigitalContent,
@@ -82,5 +84,27 @@ describe("role helpers", () => {
     expect(canReviewLeave("bizops")).toBe(false);
     expect(ROLE_DEPT.employee).toBeUndefined();
     expect(ROLE_DEPT.bizops).toBe("business");
+  });
+});
+
+describe("design studio access", () => {
+  it("is limited to designers and admins", () => {
+    expect(canAccessDesignStudio("designer")).toBe(true);
+    expect(canAccessDesignStudio("admin")).toBe(true);
+    expect(canAccessDesignStudio("digitalops")).toBe(false);
+    expect(canAccessDesignStudio("bizops")).toBe(false);
+    expect(canAccessDesignStudio("employee")).toBe(false);
+    expect(canAccessDesignStudio(null)).toBe(false);
+  });
+});
+
+describe("digital operations access", () => {
+  it("is limited to digital officers and admins", () => {
+    expect(canAccessDigitalOps("digitalops")).toBe(true);
+    expect(canAccessDigitalOps("admin")).toBe(true);
+    expect(canAccessDigitalOps("designer")).toBe(false);
+    expect(canAccessDigitalOps("bizops")).toBe(false);
+    expect(canAccessDigitalOps("employee")).toBe(false);
+    expect(canAccessDigitalOps(null)).toBe(false);
   });
 });
