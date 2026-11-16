@@ -93,15 +93,18 @@ function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-20 border-b border-slate-800/80 bg-[#070B12]/90 backdrop-blur-xl">
           <div className="flex h-[76px] items-center justify-between px-5 sm:px-8">
             <div className="flex items-center gap-3 lg:hidden">
-              <button type="button" aria-label="Open menu" aria-expanded={menuOpen} aria-controls="mobile-menu" onClick={() => setMenuOpen(true)} className="grid h-11 w-11 place-items-center rounded-lg border border-slate-700 bg-slate-900 text-slate-200 transition hover:border-sky-400 hover:text-white">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
-              </button>
               <img src="/logo.png" alt="B34ST logo" className="h-12 w-12 flex-none object-contain" />
+            </div>
+            <div className="hidden lg:block">
+              <p className="text-xs text-slate-500">B34ST Web Services <span className="px-1.5 text-slate-700">/</span> <span className="text-slate-300">Staff workspace</span></p>
             </div>
             <div className="flex items-center gap-3">
               <span className="hidden rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium text-emerald-300 sm:inline-flex"><span className="mr-2 h-1.5 w-1.5 self-center rounded-full bg-emerald-400" />Workspace active</span>
               <div className="grid h-9 w-9 place-items-center rounded-full border border-slate-700 bg-slate-900 text-xs font-semibold text-sky-200">{(user?.displayName || user?.email || "B").charAt(0).toUpperCase()}</div>
               <button className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-sky-400 hover:text-white" onClick={handleSignOut}>Sign out</button>
+              <button type="button" aria-label="Open menu" aria-expanded={menuOpen} aria-controls="mobile-menu" onClick={() => setMenuOpen(true)} className="grid h-11 w-11 place-items-center rounded-lg border border-slate-700 bg-slate-900 text-slate-200 transition hover:border-sky-400 hover:text-white lg:hidden">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+              </button>
             </div>
           </div>
         </header>
