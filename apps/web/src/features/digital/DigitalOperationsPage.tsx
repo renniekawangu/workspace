@@ -18,6 +18,7 @@ import {
 } from "firebase/firestore";
 import { useAuth } from "../../app/AuthProvider";
 import { writeAudit } from "../../lib/audit";
+import { DrivePicker, DriveDownloadButton } from "./DrivePicker";
 import { db } from "../../lib/firebase";
 import {
   canCreateDigitalContent,
@@ -80,6 +81,7 @@ type Asset = {
   category: string;
   platform: string;
   assetUrl: string;
+  driveFileId?: string;
   notes: string;
 };
 
@@ -257,6 +259,7 @@ export function DigitalOperationsPage() {
   const [campaignOpen, setCampaignOpen] = useState(false);
   const [asset, setAsset] = useState(blankAsset);
   const [assetOpen, setAssetOpen] = useState(false);
+  const [driveOpen, setDriveOpen] = useState(false);
   const [metricsFor, setMetricsFor] = useState<Campaign | null>(null);
   const [metricsForm, setMetricsForm] = useState({
     impressions: "0",
@@ -1259,7 +1262,10 @@ export function DigitalOperationsPage() {
 
           {tab === "Asset library" && assetAccess && (
             <div className="space-y-4">
-              <div className="flex justify-end">
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button variant="ghost" onClick={() => setDriveOpen(true)}>
+                  From Google Drive
+                </Button>
                 <Button
                   onClick={() => {
                     setAsset(blankAsset);
@@ -1272,7 +1278,7 @@ export function DigitalOperationsPage() {
               {assets.length === 0 ? (
                 <EmptyState
                   title="No assets linked"
-                  text="Store external creative URLs and notes here. Files are not uploaded to Firebase."
+                  text="Add files from Google Drive or store external creative URLs and notes here. Files are kept in Drive, not Firebase."
                 />
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
@@ -1280,7 +1286,9 @@ export function DigitalOperationsPage() {
                     <article key={a.id} className="panel p-4">
                       <h3 className="font-semibold text-white">{a.name}</h3>
                       <p className="mt-1 text-xs text-slate-500">
-                        {a.category} · {a.platform}
+                        {[a.category, a.platform, a.driveFileId && "Google Drive"]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                       {a.notes && (
                         <p className="mt-2 text-sm text-slate-400">{a.notes}</p>
@@ -1293,6 +1301,9 @@ export function DigitalOperationsPage() {
                       >
                         Open asset
                       </a>
+                      {a.driveFileId && (
+                        <DriveDownloadButton id={a.driveFileId} name={a.name} />
+                      )}
                     </article>
                   ))}
                 </div>
@@ -1625,6 +1636,17 @@ export function DigitalOperationsPage() {
             />
           </form>
         </Modal>
+      )}
+
+      {driveOpen && assetAccess && user && (
+        <DrivePicker
+          uid={user.uid}
+          existingIds={
+            new Set(assets.map((a) => a.driveFileId).filter(Boolean) as string[])
+          }
+          onAdded={() => void load()}
+          onClose={() => setDriveOpen(false)}
+        />
       )}
 
       {assetOpen && assetAccess && (

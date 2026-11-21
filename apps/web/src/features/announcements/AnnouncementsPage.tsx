@@ -12,6 +12,7 @@ import {
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useAuth } from "../../app/AuthProvider";
 import { writeAudit } from "../../lib/audit";
+import { notify } from "../../lib/notify";
 import { loadUsers } from "../../lib/data";
 import { db } from "../../lib/firebase";
 import { useToast } from "../../lib/toast";
@@ -122,6 +123,7 @@ export function AnnouncementsPage() {
         "announcement",
         ref.id,
       );
+      void notify("announcement.created", ref.id);
       setTitle("");
       setBody("");
       setMessage("Announcement published.");

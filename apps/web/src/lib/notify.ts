@@ -1,6 +1,11 @@
 import { auth } from "./firebase";
 
-export type NotifyEvent = "lead.created" | "leave.requested" | "leave.decided";
+export type NotifyEvent =
+  | "lead.created"
+  | "leave.requested"
+  | "leave.decided"
+  | "task.created"
+  | "announcement.created";
 
 /**
  * Asks the server to email the right person about something the signed-in user just did.

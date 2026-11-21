@@ -8,6 +8,7 @@ import {
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useAuth } from "../../app/AuthProvider";
 import { writeAudit } from "../../lib/audit";
+import { notify } from "../../lib/notify";
 import { loadTasks, loadUsers, type Profile } from "../../lib/data";
 import {
   DEPARTMENTS,
@@ -233,6 +234,7 @@ export function TaskBoardPage() {
         updatedBy: user.uid,
       });
       await writeAudit(user.uid, "task.created", "task", ref.id);
+      void notify("task.created", ref.id);
       setForm(blankForm(role));
       setCreateOpen(false);
       await load();

@@ -10,7 +10,13 @@ import {
   sendMailSafe,
 } from "./_lib/notify";
 
-const EVENTS = ["lead.created", "leave.requested", "leave.decided"] as const;
+const EVENTS = [
+  "lead.created",
+  "leave.requested",
+  "leave.decided",
+  "task.created",
+  "announcement.created",
+] as const;
 type EventName = (typeof EVENTS)[number];
 
 async function emailOf(uid: unknown) {
@@ -49,6 +55,67 @@ async function handle(event: EventName, id: string, uid: string, role: string) {
     });
     if (!ok) await releaseEvent(key);
     return { sent: ok };
+  }
+
+  if (event === "task.created") {
+    const task = (await db.doc(`tasks/${id}`).get()).data();
+    if (!task || task.createdBy !== uid || !isRecent(task.createdAt, now))
+      throw new HttpError(403, "Not a task you just created.");
+    // Nothing to tell someone who assigned a task to themselves.
+    if (task.assigneeId === uid) return { sent: false, skipped: "self" };
+    if (!(await claimEvent(key))) return { sent: false, duplicate: true };
+    const due = (task.dueDate as { toDate?: () => Date } | null)?.toDate?.();
+    const dueText = due
+      ? new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lusaka" }).format(
+          due,
+        )
+      : "none";
+    const description = oneLine(task.description).slice(0, 500);
+    const ok = await sendMailSafe({
+      to: await emailOf(task.assigneeId),
+      subject: `New task: ${oneLine(task.title)}`,
+      text: `${await nameOf(uid)} assigned you a task.\n\nTitle: ${oneLine(task.title)}\nPriority: ${oneLine(task.priority) || "-"}\nDepartment: ${oneLine(task.department)}\nDue: ${dueText}${description ? `\n\n${description}` : ""}\n\nOpen Tasks in the staff workspace to update it.\n`,
+    });
+    if (!ok) await releaseEvent(key);
+    return { sent: ok };
+  }
+
+  if (event === "announcement.created") {
+    const post = (await db.doc(`announcements/${id}`).get()).data();
+    if (
+      !post ||
+      post.createdBy !== uid ||
+      post.status !== "published" ||
+      !isRecent(post.createdAt, now)
+    )
+      throw new HttpError(403, "Not an announcement you just published.");
+    if (!(await claimEvent(key))) return { sent: false, duplicate: true };
+    // Everyone with an active role except the author, in Bcc so addresses are not shared.
+    const active = await db
+      .collection("roles")
+      .where("active", "==", true)
+      .limit(200)
+      .get();
+    const uids = active.docs.map((d) => d.id).filter((x) => x !== uid);
+    const emails: string[] = [];
+    for (let i = 0; i < uids.length; i += 100) {
+      const { users } = await adminAuth().getUsers(
+        uids.slice(i, i + 100).map((x) => ({ uid: x })),
+      );
+      for (const u of users) if (u.email && !u.disabled) emails.push(u.email);
+    }
+    if (!emails.length) {
+      await releaseEvent(key);
+      return { sent: false, recipients: 0 };
+    }
+    const ok = await sendMailSafe({
+      to: notifyAddress(),
+      bcc: emails,
+      subject: `New announcement: ${oneLine(post.title)}`,
+      text: `${await nameOf(uid)} posted an announcement.\n\n${oneLine(post.title)}\n\n${String(post.body ?? "").slice(0, 2000)}\n\nRead it in the staff workspace under Announcements.\n`,
+    });
+    if (!ok) await releaseEvent(key);
+    return { sent: ok, recipients: emails.length };
   }
 
   const leave = (await db.doc(`leave/${id}`).get()).data();

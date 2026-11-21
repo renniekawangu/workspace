@@ -24,7 +24,8 @@
     "seed": "tsx scripts/seed-data.ts",
     "encode-firebase-service-account": "tsx scripts/encode-firebase-service-account.ts",
     "test-smtp": "tsx scripts/test-smtp.ts",
-    "test:api": "vitest run api shared"
+    "test:api": "vitest run api shared",
+    "drive:auth": "tsx scripts/drive-auth.ts"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

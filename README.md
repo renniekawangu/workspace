@@ -94,7 +94,7 @@ Recording an invoice payment can email a PDF receipt to the client from the comp
 
 **Audit trail.** `auditLogs` can no longer be written by browsers (except the admin role-change batches in `userService.ts`). `writeAudit()` calls `POST /api/audit`, which takes the actor from the verified token and accepts an entry only if the target document was changed by that user in the last 10 minutes (or is gone, for deletions). Retried entries are idempotent.
 
-**Email alerts** (`POST /api/notify`, staff-triggered): new lead, leave requested (to the approver), leave decided (to the employee). Recipients always come from stored records, and each event is sent once (`mailLog/`). A daily Vercel Cron (`/api/cron-overdue`, 05:00 UTC) emails one digest of unpaid invoices past their due date.
+**Email alerts** (`POST /api/notify`, staff-triggered): new lead, leave requested (to the approver), leave decided (to the employee), task assigned (to the assignee, skipped when you assign it to yourself) and announcement published (to every active staff member except the author, sent in Bcc, max 200). Recipients always come from stored records, and each event is sent once (`mailLog/`). A daily Vercel Cron (`/api/cron-overdue`, 05:00 UTC) emails one digest of unpaid invoices past their due date.
 
 Server-only variables to set in Vercel, in addition to the SMTP and Firebase ones used by receipts:
 
@@ -107,3 +107,20 @@ Server-only variables to set in Vercel, in addition to the SMTP and Firebase one
 | `INTAKE_SALT` | Optional random string used when hashing IPs for rate limiting |
 
 Deploy `firebase/firestore.rules` **before** the app, because browsers can no longer write audit entries. Use `vercel dev` locally so `/api/*` exists. Run `npm run test:all`.
+
+## Asset library and Google Drive
+
+The Asset library (Digital Operations and Designer) can now keep files in one Google Drive folder. **From Google Drive** opens a picker to upload a file (up to 4 MB), or to add any file already in the folder to the library. Library items that came from Drive get a **Download** button that goes through `GET /api/drive`, so staff do not need Drive access. Pasted links keep working. Roles: admin, digitalops, designer.
+
+The server acts as the Drive folder's owner using an OAuth refresh token (a service account cannot upload to a normal Google Drive because it has no storage quota). Every request is limited to files directly inside `GOOGLE_DRIVE_FOLDER_ID`. Uploads are limited to images, video, PDF, Office and text files.
+
+One-time setup:
+
+1. Google Cloud Console (the same project as Firebase): enable the **Google Drive API**.
+2. APIs & Services → OAuth consent screen: External, add yourself as a test user, then **Publish app** (in Testing mode the refresh token expires after 7 days).
+3. Credentials → Create OAuth client ID → **Desktop app**. Copy the client id and secret.
+4. In Drive, create a folder (for example "B34ST Assets") and copy its id from the URL (`drive.google.com/drive/folders/<id>`).
+5. Put `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` and `GOOGLE_DRIVE_FOLDER_ID` in your local `.env`, run `npm run drive:auth`, sign in as the Drive owner, and copy the printed `GOOGLE_OAUTH_REFRESH_TOKEN`.
+6. Add all four variables in Vercel (Production and Preview), deploy `firebase/firestore.rules`, then redeploy.
+
+Use a dedicated Google account to own the folder if you can: the token has access to that whole Drive account, even though the app only touches the one folder.

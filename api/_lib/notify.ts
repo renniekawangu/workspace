@@ -13,6 +13,7 @@ export const oneLine = (s: unknown) =>
 /** Email is a convenience, never a reason to fail the request. */
 export async function sendMailSafe(opts: {
   to: string;
+  bcc?: string[];
   subject: string;
   text: string;
 }) {
@@ -22,6 +23,7 @@ export async function sendMailSafe(opts: {
       from: fromAddress(),
       replyTo: process.env.MAIL_REPLY_TO || undefined,
       to: opts.to,
+      bcc: opts.bcc?.length ? opts.bcc : undefined,
       subject: oneLine(opts.subject).slice(0, 200),
       text: opts.text,
     });

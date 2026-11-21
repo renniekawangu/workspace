@@ -13,3 +13,12 @@ test('Vercel rewrites keep /api/* away from the SPA fallback', () => {
   assert.ok(spaIndex >= 0, 'Expected a SPA fallback rewrite.');
   assert.ok(apiIndex < spaIndex, 'The API rewrite must be evaluated before the SPA fallback.');
 });
+
+test('The public intake form is routed before the SPA fallback (no login needed)', () => {
+  const rewrites = config.rewrites;
+  const spaIndex = rewrites.findIndex((rule) => rule.source === '/(.*)');
+  for (const source of ['/intake', '/intake/']) {
+    const index = rewrites.findIndex((rule) => rule.source === source && rule.destination === '/intake/index.html');
+    assert.ok(index >= 0 && index < spaIndex, `${source} must serve the static form before the SPA fallback.`);
+  }
+});

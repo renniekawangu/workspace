@@ -51,3 +51,12 @@
 - Alerts use client-triggered `/api/notify` plus one daily Vercel Cron because Spark has no Cloud Functions or schedulers. Hobby cron runs once a day. `mailLog/` makes each event once-only. Alerts are best effort and never block the user action.
 - API unit tests were not run by `npm test` before (it only ran the web workspace). `npm run test:api` now runs them and is part of `test:all`.
 
+
+## Google Drive asset library (21 Nov 2026)
+
+- Drive access is OAuth as the folder owner (refresh token in env), not a service account: service accounts have no storage quota, so uploads to a normal My Drive folder fail. The scope is full `drive` so files dropped into the folder by hand are listed; the server only ever touches direct children of `GOOGLE_DRIVE_FOLDER_ID` (checked on every get, download and list). Risk: the token can reach the whole Drive account, so prefer a dedicated account. Rotating it means re-running `npm run drive:auth`.
+- Files stay in Drive; Firestore only stores the link plus `driveFileId` on `contentAssets` (rules allow the optional field). Downloads are proxied and streamed so staff need no Drive permission. Native Google Docs/Sheets/Slides are open-in-Drive only.
+- Uploads are capped at 4 MB because Vercel functions limit request bodies to 4.5 MB. Larger files (video) are added by dropping them into the folder, then using Add to library. A resumable browser-to-Drive upload would lift this, but needs CORS and CSP work and was left out.
+- Upload types are an allowlist in `shared/drive.ts` (no HTML, SVG or executables), enforced in the browser and again on the server.
+
+- Task and announcement emails (21 Nov 2026) reuse `/api/notify`: `task.created` emails the assignee, `announcement.created` emails all active roles in Bcc. The in-app Notifications page is computed from live data (nothing stored), so only these two creation events send mail. Reassigning an existing task does not email yet.

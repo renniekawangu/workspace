@@ -18,6 +18,7 @@ import {
 import { Link } from "react-router-dom";
 import { useAuth } from "../../app/AuthProvider";
 import { writeAudit } from "../../lib/audit";
+import { DrivePicker, DriveDownloadButton } from "../digital/DrivePicker";
 import { loadTasks } from "../../lib/data";
 import { db } from "../../lib/firebase";
 import { toDate, fmtDate } from "../../lib/format";
@@ -63,6 +64,7 @@ type Asset = {
   category: string;
   platform: string;
   assetUrl: string;
+  driveFileId?: string;
   notes: string;
 };
 
@@ -173,6 +175,7 @@ export function DesignerPage() {
   const [postOpen, setPostOpen] = useState(false);
   const [asset, setAsset] = useState(blankAsset);
   const [assetOpen, setAssetOpen] = useState(false);
+  const [driveOpen, setDriveOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!user || !role) return;
@@ -617,19 +620,24 @@ export function DesignerPage() {
                     ]}
                   />
                 </div>
-                <Button
-                  onClick={() => {
-                    setAsset(blankAsset);
-                    setAssetOpen(true);
-                  }}
-                >
-                  Add asset link
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="ghost" onClick={() => setDriveOpen(true)}>
+                    From Google Drive
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setAsset(blankAsset);
+                      setAssetOpen(true);
+                    }}
+                  >
+                    Add asset link
+                  </Button>
+                </div>
               </div>
               {filteredAssets.length === 0 ? (
                 <EmptyState
                   title="No assets found"
-                  text="Link external creative files and templates here. Files are not uploaded to Firebase."
+                  text="Add files from Google Drive or link external creative files and templates here. Files are kept in Drive, not Firebase."
                 />
               ) : (
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -637,7 +645,9 @@ export function DesignerPage() {
                     <article key={a.id} className="panel p-4">
                       <h3 className="font-semibold text-white">{a.name}</h3>
                       <p className="mt-1 text-xs text-slate-500">
-                        {a.category} · {a.platform}
+                        {[a.category, a.platform, a.driveFileId && "Google Drive"]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                       {a.notes && (
                         <p className="mt-2 text-sm text-slate-400">{a.notes}</p>
@@ -650,6 +660,9 @@ export function DesignerPage() {
                       >
                         Open asset
                       </a>
+                      {a.driveFileId && (
+                        <DriveDownloadButton id={a.driveFileId} name={a.name} />
+                      )}
                     </article>
                   ))}
                 </div>
@@ -723,6 +736,17 @@ export function DesignerPage() {
             />
           </form>
         </Modal>
+      )}
+
+      {driveOpen && user && (
+        <DrivePicker
+          uid={user.uid}
+          existingIds={
+            new Set(assets.map((a) => a.driveFileId).filter(Boolean) as string[])
+          }
+          onAdded={() => void load()}
+          onClose={() => setDriveOpen(false)}
+        />
       )}
 
       {assetOpen && (

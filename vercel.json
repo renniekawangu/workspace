@@ -7,6 +7,18 @@
       "destination": "/api/$1"
     },
     {
+      "source": "/intake",
+      "destination": "/intake/index.html"
+    },
+    {
+      "source": "/intake/",
+      "destination": "/intake/index.html"
+    },
+    {
+      "source": "/intake/(.*)",
+      "destination": "/intake/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
