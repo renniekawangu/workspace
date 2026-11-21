@@ -20,6 +20,7 @@ import {
 } from "firebase/firestore";
 import { useAuth } from "../../app/AuthProvider";
 import { writeAudit } from "../../lib/audit";
+import { notify } from "../../lib/notify";
 import { loadUsers, type Profile } from "../../lib/data";
 import { db } from "../../lib/firebase";
 import { canReviewLeave } from "../../lib/roles";
@@ -212,6 +213,7 @@ export function LeavePage() {
         updatedAt: serverTimestamp(),
       });
       await writeAudit(user.uid, "leave.requested", "leave", ref.id);
+      void notify("leave.requested", ref.id);
       setStart("");
       setEnd("");
       setReason("");
@@ -243,6 +245,7 @@ export function LeavePage() {
         updatedAt: serverTimestamp(),
       });
       await writeAudit(user.uid, `leave.${status}`, "leave", item.id);
+      void notify("leave.decided", item.id);
       await load();
       toast(
         status === "approved" ? "Leave approved." : "Leave rejected.",

@@ -33,3 +33,21 @@
 - Leave duration is inclusive calendar days (weekends included); no automatic leave balance or public holiday calculation is claimed. Leave balance policy and working-day calendars remain business decisions.
 - Added attendance and leave indexes. No paid Firebase services or external services were introduced.
 - Attendance and leave rules are deny-by-default outside the explicit role/ownership paths. Firestore Emulator verification and complete build checks remain required before deployment.
+
+## Website intake (20 Nov 2026)
+
+- Added `/business/intake` (admin and bizops) with an `intakes` collection. It stores the client's website brief: business basics, pages, products, services, look and feel. Staff fill it on a call or paste the summary a client sent from the public form; the paste is parsed and shown for review before saving.
+- Rules mirror `leads`: read/create/update for admin and bizops only, delete denied (archive via `status`), new records must start as `new`, `source` is immutable. Field lengths are enforced in `firestore.rules` and mirrored in `features/business/intake.ts` (`LIMITS`). Rules cannot loop, so the contents of the `products` and `services` lists are bounded by count only and by the client for field length; writers are trusted staff.
+- Designers and digital ops get no access, following the RBAC matrix (no leads/clients/business data). If designers need the brief to build a site, decide that explicitly and add a read rule or a stripped copy.
+- The public client form (`apps/web/public/intake/`) stores nothing and has no Firestore access. It builds a text summary the client sends by WhatsApp or email. Its script is an external file because the CSP in `vercel.json` has `script-src 'self'` and would block an inline script.
+- Summary text collapses line breaks to " / " and replaces "|" in product fields with "/" so the format stays one record per line and can be parsed back.
+
+## Audit, public intake, links and alerts (20 Nov 2026)
+
+- `auditLogs` client writes are now limited to admins and `targetType == 'user'`, which keeps the atomic role-change batches in `userService.ts` working. Everything else goes through `/api/audit`. The server derives the actor from the ID token and verifies the claim against the target document (changed recently by that user, or deleted). Unknown target types are rejected, so any new `writeAudit` target type must be added to `AUDIT_COLLECTIONS` in `api/_lib/auditClaim.ts`. `writeAudit` never throws, so an audit failure cannot make a saved change look failed. Admins can still forge `user` entries from the client; the alternative is moving role changes server-side.
+- The public intake endpoint is the only unauthenticated write path. It is bounded by validation, a body size cap, per-IP and daily rate limits stored in `rateLimits/` (no client access), a honeypot and a minimum fill time. It does not send mail to submitted addresses. Submissions use `createdBy: "public"`.
+- Shared validation lives in `shared/intake.ts` and is imported by both the web app and `api/`. `LIMITS` must stay in sync with `intake()` in `firestore.rules`.
+- Intake links (`leadId`, `clientId`, `projectId`) are stored on the intake only, because lead/client/project rules use strict key lists. Making a client moves a linked lead to Won; starting a project sets the intake to Building.
+- Alerts use client-triggered `/api/notify` plus one daily Vercel Cron because Spark has no Cloud Functions or schedulers. Hobby cron runs once a day. `mailLog/` makes each event once-only. Alerts are best effort and never block the user action.
+- API unit tests were not run by `npm test` before (it only ran the web workspace). `npm run test:api` now runs them and is part of `test:all`.
+

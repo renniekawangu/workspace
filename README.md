@@ -87,3 +87,23 @@ Recording an invoice payment can email a PDF receipt to the client from the comp
 # workspace
 # workspace
 # workspace
+
+## Website intake, audit trail and email alerts
+
+**Website intake** (`/business/intake`, admin and bizops). Staff fill in a client's website brief, paste a summary the client sent, or receive one directly from the public form at `/intake/`. From a saved intake you can add it to Leads, make it a Client, start a Project (links are stored on the intake), and copy a ready-to-paste build brief. The public form posts to `POST /api/intake-submit`, which validates with `shared/intake.ts`, rate-limits (5 per IP per hour, 300 per day), uses a honeypot and a minimum fill time, and writes only to `intakes` as `source: client_form`. It never emails the address the client typed.
+
+**Audit trail.** `auditLogs` can no longer be written by browsers (except the admin role-change batches in `userService.ts`). `writeAudit()` calls `POST /api/audit`, which takes the actor from the verified token and accepts an entry only if the target document was changed by that user in the last 10 minutes (or is gone, for deletions). Retried entries are idempotent.
+
+**Email alerts** (`POST /api/notify`, staff-triggered): new lead, leave requested (to the approver), leave decided (to the employee). Recipients always come from stored records, and each event is sent once (`mailLog/`). A daily Vercel Cron (`/api/cron-overdue`, 05:00 UTC) emails one digest of unpaid invoices past their due date.
+
+Server-only variables to set in Vercel, in addition to the SMTP and Firebase ones used by receipts:
+
+| Variable | Purpose |
+|---|---|
+| `NOTIFY_EMAIL` | Inbox for new intakes, new leads and the overdue digest (falls back to `COMPANY_EMAIL`, then `MAIL_FROM`) |
+| `CRON_SECRET` | Any long random string. Vercel sends it as a bearer token to the cron route; without it the route refuses to run |
+| `APP_URL` | Optional, e.g. `https://app.b34stweb.com`, used for the link in new-intake emails |
+| `INTAKE_ALLOWED_ORIGINS` | Optional, comma-separated origins allowed to post the public form from another site |
+| `INTAKE_SALT` | Optional random string used when hashing IPs for rate limiting |
+
+Deploy `firebase/firestore.rules` **before** the app, because browsers can no longer write audit entries. Use `vercel dev` locally so `/api/*` exists. Run `npm run test:all`.

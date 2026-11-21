@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { useAuth } from "../../app/AuthProvider";
 import { writeAudit } from "../../lib/audit";
+import { notify } from "../../lib/notify";
 import { db } from "../../lib/firebase";
 import { canManageBusiness } from "../../lib/roles";
 import { useToast } from "../../lib/toast";
@@ -159,6 +160,7 @@ export function LeadsPage() {
         updatedBy: user.uid,
       });
       await writeAudit(user.uid, "lead.created", "lead", ref.id);
+      void notify("lead.created", ref.id);
       setForm(blank());
       setCreateOpen(false);
       await load();

@@ -16,14 +16,15 @@
     "format:check": "prettier --check .",
     "typecheck": "npm --workspace @b34st/web run typecheck && tsc --noEmit -p scripts/tsconfig.json && tsc --noEmit -p api/tsconfig.json",
     "test": "npm --workspace @b34st/web run test",
-    "test:all": "npm run lint && npm run typecheck && npm run test",
+    "test:all": "npm run lint && npm run typecheck && npm run test && npm run test:api",
     "bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
     "create-user": "tsx scripts/create-user.ts",
     "disable-user": "tsx scripts/disable-user.ts",
     "enable-user": "tsx scripts/enable-user.ts",
     "seed": "tsx scripts/seed-data.ts",
     "encode-firebase-service-account": "tsx scripts/encode-firebase-service-account.ts",
-    "test-smtp": "tsx scripts/test-smtp.ts"
+    "test-smtp": "tsx scripts/test-smtp.ts",
+    "test:api": "vitest run api shared"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Website Details Form</title>
+<style>
+:root{--ink:#1c2430;--muted:#5b6675;--line:#d9dfe7;--bg:#f6f8fb;--card:#fff;--accent:#1f5fae;--accent-ink:#fff;--field:#fff}
+@media (prefers-color-scheme:dark){:root{--ink:#e8edf3;--muted:#9aa6b5;--line:#2c3644;--bg:#11161d;--card:#18202a;--accent:#5a9be0;--accent-ink:#0b1320;--field:#10161e}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:clamp(1.7rem,5vw,2.3rem);line-height:1.15;margin:0 0 8px}
+h2{font-size:1.15rem;margin:0 0 4px}
+.lead,.hint{color:var(--muted);font-size:.92rem;margin:0}
+.lead{font-size:1rem;margin-bottom:24px}
+fieldset{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:0 0 16px;padding:20px}
+legend{padding:0 6px;font-weight:600}
+label{display:block;font-weight:500;font-size:.92rem;margin-top:14px}
+.req::after{content:" *";color:var(--accent)}
+input[type=text],input[type=email],input[type=tel],input[type=url],textarea{width:100%;min-height:46px;margin-top:6px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink);font:inherit}
+textarea{min-height:96px;resize:vertical}
+input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.g2{display:grid;gap:0 16px}
+@media(min-width:620px){.g2{grid-template-columns:1fr 1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;margin:0;padding:8px 14px;border:1px solid var(--line);border-radius:999px;font-weight:400;cursor:pointer}
+.row{position:relative;display:grid;gap:8px;margin-top:12px;padding:12px 44px 12px 12px;border:1px solid var(--line);border-radius:10px}
+@media(min-width:620px){.row.p{grid-template-columns:1fr 1fr}}
+.row input{margin:0}
+.rm{position:absolute;top:6px;right:6px;width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:1.4rem;cursor:pointer}
+button.btn{min-height:46px;padding:0 22px;border:1px solid var(--accent);border-radius:999px;background:var(--accent);color:var(--accent-ink);font-family:inherit;font-weight:600;font-size:.95rem;cursor:pointer}
+button.btn.sec{background:transparent;color:var(--accent)}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+#out{display:none;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-top:8px}
+#out textarea{min-height:260px;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace}
+#msg{min-height:1.4em;font-size:.9rem;color:var(--muted);margin-top:8px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<main>
+<h1>Tell us about your business</h1>
+<p class="lead">Fill in what you know so we can build your website. Skip anything you are unsure about, and we will leave it as a placeholder rather than make it up. Fields marked * are needed to start.</p>
+
+<form id="f" novalidate>
+<fieldset><legend>1. Business basics</legend>
+<label class="req" for="name">Business name</label><input type="text" id="name" required autocomplete="organization">
+<label for="contact">Your name <span class="hint">(who should we speak to?)</span></label><input type="text" id="contact" autocomplete="name">
+<label for="tag">Short tagline <span class="hint">(optional)</span></label><input type="text" id="tag">
+<label class="req" for="what">What do you sell or do? <span class="hint">One or two sentences.</span></label><textarea id="what" required></textarea>
+<div class="g2">
+<div><label class="req" for="loc">Location (city, country)</label><input type="text" id="loc" required></div>
+<div><label for="wa">WhatsApp number <span class="hint">(with country code)</span></label><input type="tel" id="wa" placeholder="+260 …" autocomplete="tel"></div>
+<div><label for="email">Email</label><input type="email" id="email" autocomplete="email"></div>
+<div><label for="phone">Phone (if different)</label><input type="tel" id="phone"></div>
+</div>
+<label for="social">Social media links <span class="hint">(only real, active ones)</span></label><textarea id="social" rows="2"></textarea>
+<p class="hint" id="cerr" style="margin-top:6px;color:var(--accent)" hidden>Please add a WhatsApp number, phone or email so customers can reach you.</p>
+</fieldset>
+
+<fieldset><legend>2. Pages you want</legend>
+<div class="chips" id="pages"></div>
+<label for="otherpages">Anything else? <span class="hint">(gallery, FAQ, team, other locations)</span></label><input type="text" id="otherpages">
+</fieldset>
+
+<fieldset><legend>3. Products or catalogue</legend>
+<p class="hint">Add each product or group of products. Price is optional: leave it blank to show "price on enquiry".</p>
+<label for="cats">Categories <span class="hint">(separate with commas)</span></label><input type="text" id="cats" placeholder="e.g. Rings, Necklaces, Watches">
+<div id="products"></div>
+<div class="actions"><button type="button" class="btn sec" id="addp">+ Add a product</button></div>
+</fieldset>
+
+<fieldset><legend>4. Services <span class="hint">(if you offer any)</span></legend>
+<div id="services"></div>
+<div class="actions"><button type="button" class="btn sec" id="adds">+ Add a service</button></div>
+<label for="steps">How do customers order or get started? <span class="hint">(for example: enquire, agree details, delivery)</span></label><textarea id="steps" rows="3"></textarea>
+</fieldset>
+
+<fieldset><legend>5. About your business</legend>
+<label for="about">Short introduction <span class="hint">(2 to 4 true sentences)</span></label><textarea id="about"></textarea>
+<label for="facts">Year started, team size, awards or certifications <span class="hint">(only if real and you want them shown)</span></label><textarea id="facts" rows="2"></textarea>
+</fieldset>
+
+<fieldset><legend>6. Look and feel</legend>
+<label for="colors">Brand colours <span class="hint">(names or hex codes; or "choose for me")</span></label><input type="text" id="colors">
+<label>Style <span class="hint">(pick any)</span></label>
+<div class="chips" id="styles"></div>
+<label for="likes">Websites you like <span class="hint">(links)</span></label><textarea id="likes" rows="2"></textarea>
+<label for="photos">Photos and logo</label>
+<div class="chips" id="photos"></div>
+<p class="hint">Please send your logo and photos separately by WhatsApp or email, named to match the products above.</p>
+</fieldset>
+
+<fieldset><legend>7. Practical</legend>
+<div class="g2">
+<div><label for="domain">Domain name <span class="hint">(if you have one)</span></label><input type="text" id="domain"></div>
+<div><label for="deadline">Deadline</label><input type="text" id="deadline"></div>
+</div>
+<label for="avoid">Anything we must NOT say or show?</label><textarea id="avoid" rows="2"></textarea>
+</fieldset>
+
+<div aria-hidden="true" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden"><label>Leave this empty<input type="text" id="hp" tabindex="-1" autocomplete="off"></label></div>
+<div class="actions"><button type="submit" class="btn">Create my summary</button></div>
+<div id="msg" role="status" aria-live="polite"></div>
+</form>
+
+<section id="out" aria-label="Your summary">
+<h2>Your summary</h2>
+<p id="sendmsg" role="status" aria-live="polite" class="hint"></p>
+<p class="hint">Check it, then send it to us using one of the buttons below.</p>
+<textarea id="sum" readonly aria-label="Summary text"></textarea>
+<div class="actions">
+<button class="btn" id="send" type="button" hidden>Send to B34ST</button>
+<button class="btn sec" id="copy" type="button">Copy</button>
+<button class="btn sec" id="dl" type="button">Download</button>
+<button class="btn sec" id="mail" type="button" hidden>Send by email</button>
+<button class="btn sec" id="wapp" type="button" hidden>Send on WhatsApp</button>
+</div>
+</section>
+</main>
+
+<script src="/intake/intake.js"></script>
+</body>
+</html>
